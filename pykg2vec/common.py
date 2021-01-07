@@ -196,7 +196,12 @@ class HyperparameterLoader:
         if "learning_rate" in tuning_space_raw:
             hyper_obj = {**hyper_obj, **{"learning_rate": hp.loguniform('learning_rate', np.log(tuning_space_raw['learning_rate']['min']), np.log(tuning_space_raw['learning_rate']['max']))}}
         if "hidden_size" in tuning_space_raw:
-            hyper_obj = {**hyper_obj, **{"hidden_size": scope.int(hp.qloguniform('hidden_size', np.log(tuning_space_raw['hidden_size']['min']), np.log(tuning_space_raw['hidden_size']['max']), 1))}}
+            if "step" in tuning_space_raw["hidden_size"]:
+                hyper_obj = {**hyper_obj, **{"hidden_size": scope.int(hp.qloguniform('hidden_size', np.log(tuning_space_raw['hidden_size']['min']), np.log(tuning_space_raw['hidden_size']['max']), tuning_space_raw['hidden_size']['step']))}}
+            else:
+                hyper_obj = {**hyper_obj, **{"hidden_size": scope.int(hp.qloguniform('hidden_size', np.log(tuning_space_raw['hidden_size']['min']), np.log(tuning_space_raw['hidden_size']['max']), 1))}}
+        if "hidden_size_1" in  tuning_space_raw:
+            hyper_obj = {**hyper_obj, **{"hidden_size_1": hp.choice('hidden_size_1', tuning_space_raw["hidden_size_1"])}}
         if "ent_hidden_size" in tuning_space_raw:
             hyper_obj = {**hyper_obj, **{"ent_hidden_size": scope.int(hp.qloguniform("ent_hidden_size", np.log(tuning_space_raw['ent_hidden_size']['min']), np.log(tuning_space_raw['ent_hidden_size']['max']), 1))}}
         if "rel_hidden_size" in tuning_space_raw:
@@ -236,6 +241,13 @@ class HyperparameterLoader:
         if "sampling" in tuning_space_raw:
             hyper_obj = {**hyper_obj, **{"sampling": hp.choice('sampling', tuning_space_raw["sampling"])}}
 
+
+        ###################################################My_Code############################################
+        if "num_filters" in tuning_space_raw:
+            hyper_obj = {**hyper_obj, **{"num_filters": scope.int(hp.qloguniform("num_filters", np.log(tuning_space_raw['num_filters']['min']), np.log(tuning_space_raw['num_filters']['max']), 1))}}
+        if "filter_sizes" in tuning_space_raw:
+            hyper_obj = {**hyper_obj, **{"filter_sizes": hp.choice("filter_sizes", tuning_space_raw["filter_sizes"])}}
+        ##################################################\My_Code############################################
         return hyper_obj
 
 class Importer:

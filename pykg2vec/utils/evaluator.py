@@ -145,6 +145,11 @@ class MetricCalculator:
                   'fmr':self.fmr[self.epoch],
                   'mrr':self.mrr[self.epoch],
                   'fmrr':self.fmrr[self.epoch]}
+
+        ##########################################################My_Code###########################################################
+        if 10 in self.config.hits:
+            scores["fhits10"]=self.fhit[(self.epoch, 10)]
+        ##########################################################\My_Code##########################################################
         return scores
 
 
@@ -317,8 +322,11 @@ class Evaluator:
             r_tensor = torch.LongTensor([r])
             t_tensor = torch.LongTensor([t])
 
+            self.model.eval()
             hrank = self.test_head_rank(r_tensor, t_tensor, self.config.tot_entity)
             trank = self.test_tail_rank(h_tensor, r_tensor, self.config.tot_entity)
+            self.model.train()
+
 
             result_data = [trank.detach().cpu().numpy(), hrank.detach().cpu().numpy(), h, r, t, epoch]
 

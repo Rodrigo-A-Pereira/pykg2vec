@@ -1,5 +1,12 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
+
+###########################################################My_Code##########################################################
+from torch.utils.tensorboard import SummaryWriter
+import json
+
+###########################################################/My_Code#########################################################
+
 import os
 import warnings
 import torch
@@ -186,6 +193,19 @@ class Trainer:
         #print(self.config.__dict__[""])
         # pdb.set_trace()
 
+        ###########################################################My_Code##########################################################
+        print(self.config.__dict__.keys())
+        #comment = f'_{self.model.model_name}'
+
+        log_dir = str(self.config.path_result) + f'/runs/{self.model.model_name}'
+        tb = SummaryWriter(log_dir=log_dir)
+
+        #tb = SummaryWriter(comment=comment)
+        #tb.add_graph(self.model)
+        #tb.close()
+        ###########################################################/My_Code#########################################################
+
+
         """Function to train the model."""
         self.generator = Generator(self.model, self.config)
         self.monitor = Monitor.FILTERED_MEAN_RANK
@@ -198,6 +218,13 @@ class Trainer:
                 self.model.eval()
                 with torch.no_grad():
                     metrics = self.evaluator.mini_test(cur_epoch_idx)
+
+                    ###########################################################My_Code##########################################################
+                    tb.add_scalar("Filtered MR", metrics["fmr"], cur_epoch_idx)
+                    tb.add_scalar("Filtered MRR", metrics["fmrr"], cur_epoch_idx)
+                    if "fhits10" in metrics:
+                        tb.add_scalar("Filtered Hits@10", metrics["fhits10"], cur_epoch_idx)
+                    ###########################################################/My_Code##########################################################
 
                     if self.early_stopper.should_stop(metrics):
                         ### Early Stop Mechanism
@@ -219,6 +246,11 @@ class Trainer:
                                 self.save_model()
                                 self.best_metric = metrics
 
+
+        ###########################################################My_Code##########################################################
+        tb.close()
+        ###########################################################/My_Code##########################################################
+        
         self.model.eval()
         with torch.no_grad():
             self.evaluator.full_test(cur_epoch_idx)
@@ -255,6 +287,74 @@ class Trainer:
         self.generator.stop()
 
         return current_loss
+
+    ################################## My code ########################################
+    def tune_model_mrr(self):
+        """Function to tune the model."""
+        
+        hyp_disct={"lr": self.config.__dict__['learning_rate'], 
+                    "epochs": self.config.__dict__['epochs'],
+                    "batch_size": self.config.__dict__['batch_size'],
+                    "k": self.config.__dict__['hidden_size'], 
+                    "opt": self.config.__dict__['optimizer'],
+                    "neg_rate":self.config.__dict__['neg_rate']
+                    }
+        if self.model.model_name.lower() == "transe":
+            hyp_disct["l1_flag"] = self.config.__dict__['l1_flag']
+            hyp_disct["margin"] = self.config.__dict__['margin']
+            hyp_disct["sampling"] = self.config.__dict__['sampling']
+        if self.model.model_name.lower() == "rotate":
+            hyp_disct["margin"] = self.config.__dict__['margin']
+            hyp_disct["sampling"] = self.config.__dict__['sampling']
+            hyp_disct["alpha"] = self.config.__dict__['alpha']
+        if self.model.model_name.lower() in  ["distmult","simple"]:
+            hyp_disct["sampling"] = self.config.__dict__['sampling']
+            hyp_disct["lmbda"] = self.config.__dict__['lmbda']
+        if self.model.model_name.lower() == "conve":
+            hyp_disct["l1_flag"]: self.config.__dict__['l1_flag']
+            hyp_disct["hidden_size_1"] = self.config.__dict__['hidden_size_1']
+            hyp_disct["input_dropout"] = self.config.__dict__['input_dropout']
+            hyp_disct["feature_map_dropout"]= self.config.__dict__['feature_map_dropout']
+            hyp_disct["hidden_dropout"] = self.config.__dict__['hidden_dropout']
+            hyp_disct["label_smoothing"] =self.config.__dict__['label_smoothing']
+        if self.model.model_name.lower() == "convKB":
+            hyp_disct["sampling"] = self.config.__dict__['sampling']
+            hyp_disct["lmbda"] = self.config.__dict__['lmbda']
+            hyp_disct["filter_sizes"] = self.config.__dict__['filter_sizes']
+            hyp_disct["num_filters"] = self.config.__dict__['num_filters']
+
+        
+        
+        log_dir = str(self.config.path_result) + f'/hyperTunning/{self.config.model_name}/{json.dumps(hyp_disct)}'
+        tb = SummaryWriter(log_dir=log_dir)
+       
+        current_loss = float("inf")
+
+        self.generator = Generator(self.model, self.config)
+        self.evaluator = Evaluator(self.model, self.config, tuning=True)
+
+        for cur_epoch_idx in range(self.config.epochs):
+            current_loss = self.train_model_epoch(cur_epoch_idx, tuning=True)
+            tb.add_scalar("Loss", current_loss, cur_epoch_idx)
+
+        self.model.eval()
+        with torch.no_grad():
+            valid_result = self.evaluator.mini_test(cur_epoch_idx)
+        
+        self.generator.stop()
+
+        tb.add_hparams(
+            hyp_disct,
+            {
+                "fmrr": valid_result["fmrr"],
+                "loss": current_loss,
+            },
+        )
+        
+        
+        return valid_result['fmrr']
+
+    ################################## \My code ########################################
 
     def train_model_epoch(self, epoch_idx, tuning=False):
         """Function to train the model for one epoch."""
