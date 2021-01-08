@@ -67,7 +67,7 @@ class ConvE(ProjectionModel):
             self.b,
         ]
 
-        self.loss = Criterion.multi_class_bce
+        #self.loss = Criterion.multi_class_bce
 
     def embed(self, h, r, t):
         """Function to get the embedding value.

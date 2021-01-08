@@ -22,6 +22,10 @@ from pykg2vec.utils.riemannian_optimizer import RiemannianOptimizer
 from pykg2vec.data.generator import Generator
 from pykg2vec.utils.logger import Logger
 from pykg2vec.common import Monitor, TrainingStrategy
+
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
 warnings.filterwarnings('ignore')
 
 
@@ -164,7 +168,21 @@ class Trainer:
         return loss
 
     def train_step_projection(self, h, r, t, hr_t, tr_h):
-        if self.model.model_name.lower() in ["conve", "tucker", "interacte", "hyper"]:
+        if self.model.model_name.lower() == "conve":
+            if hasattr(self.config, 'label_smoothing'):
+                hr_t = hr_t * (1.0 - self.config.label_smoothing) + 1.0 / self.config.tot_entity
+                tr_h = tr_h * (1.0 - self.config.label_smoothing) + 1.0 / self.config.tot_entity
+
+            pred_tails = self.model(h, r, direction="tail")  # (h, r) -> hr_t forward
+            pred_heads = self.model(t, r, direction="head")  # (t, r) -> tr_h backward
+
+            loss_tails = torch.mean(F.binary_cross_entropy(pred_tails, hr_t))
+            loss_heads = torch.mean(F.binary_cross_entropy(pred_heads, tr_h))
+
+            loss = loss_tails + loss_heads
+            return loss
+
+        elif self.model.model_name.lower() in ["tucker", "interacte", "hyper"]:
             pred_tails = self.model(h, r, direction="tail")  # (h, r) -> hr_t forward
             pred_heads = self.model(t, r, direction="head")  # (t, r) -> tr_h backward
 
@@ -176,6 +194,8 @@ class Trainer:
             pred_tails = self.model(h, r, hr_t, direction="tail")  # (h, r) -> hr_t forward
             pred_heads = self.model(t, r, tr_h, direction="head")  # (t, r) -> tr_h backward
             loss = self.model.loss(pred_heads, pred_tails)
+
+
         loss += self.model.get_reg(h, r, t)
 
         return loss
