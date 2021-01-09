@@ -615,3 +615,10 @@ class Trainer:
         with open(str(self.config.path_result / (self.model.model_name + '_Training_results_' + str(l) + '.csv')),
                   'w') as fh:
             df.to_csv(fh)
+
+
+    def test_infer(self,h,r,t):
+        tail = self.evaluator.test_tail_rank(h, r).detach().cpu().numpy()
+        head = self.evaluator.test_head_rank(r,t).detach().cpu().numpy()
+
+        print(tail)
