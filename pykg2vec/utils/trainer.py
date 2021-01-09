@@ -622,3 +622,4 @@ class Trainer:
         head = self.evaluator.test_head_rank(r,t).detach().cpu().numpy()
 
         print(tail)
+        print(head)
