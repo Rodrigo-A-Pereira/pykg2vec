@@ -35,3 +35,15 @@ datasets:
       optimizer: "sgd"
       sampling: "uniform"
       neg_rate: 1
+
+  - dataset: "umls"
+    parameters:
+      learning_rate: 0.00537216958
+      l1_flag: True
+      hidden_size: 183
+      batch_size: 32
+      epochs: 1000
+      margin: 6.057258611
+      optimizer: "adam"
+      sampling: "uniform"
+      neg_rate: 1
