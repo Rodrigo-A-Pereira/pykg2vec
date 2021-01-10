@@ -617,9 +617,100 @@ class Trainer:
             df.to_csv(fh)
 
 
-    def test_infer(self,h,r,t):
-        tail = self.evaluator.test_tail_rank(h, r).detach().cpu().numpy()
-        head = self.evaluator.test_head_rank(r,t).detach().cpu().numpy()
+    ################################## My code ########################################
 
-        print(tail)
-        print(head)
+    def metrics_calc(self,arrRanks,arrFRanks):
+
+        Mdict={}
+        Mdict['mr']= np.mean(arrRanks)
+        Mdict['mrr'] = np.mean(np.reciprocal(arrRanks))
+        Mdict['fmr'] = np.mean(arrFRanks)
+        Mdict['fmrr'] = np.mean(np.reciprocal(arrFRanks))
+
+        for hit in [1,3,5,10]:
+            Mdict[f'hit_{hit}']= np.mean(arrRanks <= hit, dtype=np.float32)
+            Mdict[f'fhit_{hit}'] = np.mean(arrFRanks <= hit, dtype=np.float32)
+        
+        return Mdict
+
+    def batch_infer_tail(self,path_batch):
+        entity2idx = self.config.knowledge_graph.read_cache_data('entity2idx')
+        rel2idx = self.config.knowledge_graph.read_cache_data('relation2idx')
+        tranksL=[]
+        ftranksL=[]
+        with open(path_batch, 'r', encoding='utf-8') as file:
+            for line in file.readlines():
+                s, p, o = line.split('\t')
+                h1=entity2idx[s.strip()]
+                r1=rel2idx[p.strip()]
+                t1=entity2idx[o.strip()]
+                tail = self.evaluator.test_tail_rank(h1, r1,self.config.tot_entity).detach().cpu().numpy()
+                trank1, ftrank1 = self.evaluator.metric_calculator.get_tail_rank(tail, h1,r1,t1)
+                tranksL.append(trank1)
+                ftranksL.append(ftrank1)
+        
+        arrRanks = np.asarray(tranksL, dtype=np.float32)+1
+        arrFRanks = np.asarray(ftranksL, dtype=np.float32)+1
+
+        return self.metrics_calc(arrRanks,arrFRanks)
+
+    def batch_infer_head(self,path_batch):
+        entity2idx = self.config.knowledge_graph.read_cache_data('entity2idx')
+        rel2idx = self.config.knowledge_graph.read_cache_data('relation2idx')
+        hranksL=[]
+        fhranksL=[]
+        with open(path_batch, 'r', encoding='utf-8') as file:
+            for line in file.readlines():
+                s, p, o = line.split('\t')
+                h1=entity2idx[s.strip()]
+                r1=rel2idx[p.strip()]
+                t1=entity2idx[o.strip()]
+                head = self.evaluator.test_head_rank(r1, t1,self.config.tot_entity).detach().cpu().numpy()
+                hrank1, fhrank1 = self.evaluator.metric_calculator.get_head_rank(head, h1,r1,t1)
+                hranksL.append(hrank1)
+                fhranksL.append(fhrank1)
+        
+        arrRanks = np.asarray(hranksL, dtype=np.float32)+1
+        arrFRanks = np.asarray(fhranksL, dtype=np.float32)+1
+
+        return self.metrics_calc(arrRanks,arrFRanks)
+
+    def batch_infer_all(self,path_batch):
+        entity2idx = self.config.knowledge_graph.read_cache_data('entity2idx')
+        rel2idx = self.config.knowledge_graph.read_cache_data('relation2idx')
+        hranksL=[]
+        fhranksL=[]
+
+        tranksL=[]
+        ftranksL=[]
+        with open(path_batch, 'r', encoding='utf-8') as file:
+            for line in file.readlines():
+                s, p, o = line.split('\t')
+                h1=entity2idx[s.strip()]
+                r1=rel2idx[p.strip()]
+                t1=entity2idx[o.strip()]
+
+                #Predict head
+                head = self.evaluator.test_head_rank(r1, t1,self.config.tot_entity).detach().cpu().numpy()
+                hrank1, fhrank1 = self.evaluator.metric_calculator.get_head_rank(head, h1,r1,t1)
+                hranksL.append(hrank1)
+                fhranksL.append(fhrank1)
+
+                #Predict tail
+                tail = self.evaluator.test_tail_rank(h1, r1,self.config.tot_entity).detach().cpu().numpy()
+                trank1, ftrank1 = self.evaluator.metric_calculator.get_tail_rank(tail, h1,r1,t1)
+                tranksL.append(trank1)
+                ftranksL.append(ftrank1)
+        
+        arrRanksH = np.asarray(hranksL, dtype=np.float32)+1
+        arrRanksT = np.asarray(tranksL, dtype=np.float32)+1
+
+        arrFRanksH = np.asarray(fhranksL, dtype=np.float32)+1
+        arrFRanksT = np.asarray(ftranksL, dtype=np.float32)+1
+
+        arrRanks = np.concatenate((arrRanksH, arrRanksT))
+        arrFRanks = np.concatenate((arrFRanksH, arrFRanksT))
+
+        return self.metrics_calc(arrRanks,arrFRanks)
+
+    ################################## /My code ########################################
