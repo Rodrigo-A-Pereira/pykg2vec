@@ -1,0 +1,13 @@
+model_name: "TransE"
+datasets:
+  - dataset: "Pheno"
+    parameters:
+      learning_rate: 0.07893411941976719
+      l1_flag: True
+      hidden_size: 134
+      batch_size: 14
+      epochs: 500
+      margin: 7.60400317709344
+      optimizer: "adam"
+      sampling: "uniform"
+      neg_rate: 1
