@@ -713,4 +713,66 @@ class Trainer:
 
         return self.metrics_calc(arrRanks,arrFRanks)
 
+    def new_infer_head(self, r_name, t_name, topk):
+        entity2idx = self.config.knowledge_graph.read_cache_data('entity2idx')
+        rel2idx = self.config.knowledge_graph.read_cache_data('relation2idx')
+
+        try:
+            r=rel2idx[r_name]
+            t=entity2idx[t_name]
+        except ValueError:
+            print("The entity or relation does not exist")
+
+
+        heads = self.evaluator.test_head_rank(r, t, self.config.tot_entity).detach().cpu().numpy()
+        headsTopk= heads[-topk:][::-1]
+
+        idx2ent = self.config.knowledge_graph.read_cache_data('idx2entity')
+        idx2rel = self.config.knowledge_graph.read_cache_data('idx2relation')
+        
+        logs = [
+            "",
+            "(relation,tail)->({},{}) :: Inferred heads->({})".format(t, r, ",".join([str(i) for i in headsTopk])),
+            "",
+            "tail: %s" % idx2ent[t],
+            "relation: %s" % idx2rel[r],
+        ]
+
+        for idx, head in enumerate(headsTopk):
+            logs.append("%dth predicted head: %s" % (idx, idx2ent[head]))
+
+        self._logger.info("\n".join(logs))
+        return {head: idx2ent[head] for head in headsTopk}
+
+    def new_infer_tail(self, h_name, r_name, topk):
+
+        entity2idx = self.config.knowledge_graph.read_cache_data('entity2idx')
+        rel2idx = self.config.knowledge_graph.read_cache_data('relation2idx')
+
+        try:
+            r=rel2idx[r_name]
+            h=entity2idx[h_name]
+        except ValueError:
+            print("The entity or relation does not exist")
+
+        tails = self.evaluator.test_tail_rank(h, r,self.config.tot_entity).detach().cpu().numpy()
+        tailsTopk= tails[-topk:][::-1]
+
+        idx2ent = self.config.knowledge_graph.read_cache_data('idx2entity')
+        idx2rel = self.config.knowledge_graph.read_cache_data('idx2relation')
+        
+        logs = [
+            "",
+            "(relation,tail)->({},{}) :: Inferred heads->({})".format(t, r, ",".join([str(i) for i in tailsTopk])),
+            "",
+            "tail: %s" % idx2ent[t],
+            "relation: %s" % idx2rel[r],
+        ]
+
+        for idx, tail in enumerate(tailsTopk):
+            logs.append("%dth predicted head: %s" % (idx, idx2ent[tail]))
+
+        self._logger.info("\n".join(logs))
+        return {tail: idx2ent[tail] for tail in tailsTopk}
     ################################## /My code ########################################
+

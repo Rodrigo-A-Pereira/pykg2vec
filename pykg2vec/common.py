@@ -136,7 +136,6 @@ class HyperparameterLoader:
     def load_hyperparameter(self, dataset_name, algorithm):
         d_name = dataset_name.lower()
         a_name = algorithm.lower()
-
         if d_name in self.hyperparams and a_name in self.hyperparams[d_name]:
             params = self.hyperparams[d_name][a_name]
             return params
