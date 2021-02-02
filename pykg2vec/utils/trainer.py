@@ -763,9 +763,9 @@ class Trainer:
         
         logs = [
             "",
-            "(relation,tail)->({},{}) :: Inferred heads->({})".format(t, r, ",".join([str(i) for i in tailsTopk])),
+            "(head, relation)->({},{}) :: Inferred tails->({})".format(h, r, ",".join([str(i) for i in tailsTopk])),
             "",
-            "tail: %s" % idx2ent[t],
+            "head: %s" % idx2ent[h],
             "relation: %s" % idx2rel[r],
         ]
 
