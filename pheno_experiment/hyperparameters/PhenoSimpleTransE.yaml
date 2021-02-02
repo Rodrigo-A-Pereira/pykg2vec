@@ -1,13 +1,13 @@
 model_name: "TransE"
 datasets:
-  - dataset: "Pheno"
+  - dataset: "PhenoSimple"
     parameters:
-      learning_rate: 0.07893411941976719
+      learning_rate: 0.003512853763729802
       l1_flag: True
-      hidden_size: 134
-      batch_size: 14
+      hidden_size: 299
+      batch_size: 89
       epochs: 500
-      margin: 7.60400317709344
-      optimizer: "adam"
+      margin: 9.884319967513747
+      optimizer: "rms"
       sampling: "uniform"
       neg_rate: 1
